@@ -39,9 +39,10 @@ print(len(voc))
 
 
 def corrector(query):
-    #
-    # code here
-    #
+    words = query.split()
+    for word in words:
+        if word not in voc:
+            return translate(query)
     return query
 
 
