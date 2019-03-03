@@ -1,7 +1,10 @@
 import re
 import string
 import codecs
+
+import numpy as np
 from nltk import ngrams, SnowballStemmer, TrigramCollocationFinder
+from sklearn.feature_extraction.text import CountVectorizer
 
 KEYBOARD_RU_EN = {'ё': '`', 'Ё': '~', '"': '@', '№': '#', ';': '$', ':': '^', '?': '&', 'й': 'q', 'Й': 'Q', 'ц': 'w', 'Ц': 'W', 'У': 'E', 'у': 'e', 'К': 'R', 'к': 'r', 'Е': 'T', 'е': 't', 'Н': 'Y', 'н': 'y', 'Г': 'U', 'г': 'u', 'Ш': 'I', 'ш': 'i', 'Щ': 'O', 'щ': 'o', 'З': 'P', 'з': 'p', 'Х': '{', 'х': '[', 'ъ': ']', 'Ъ': '}', '/': '|', '\\': '\\', 'Ф': 'A', 'ф': 'a', 'Ы': 'S', 'ы': 's', 'В': 'D', 'в': 'd', 'А': 'F', 'а': 'f', 'П': 'G', 'п': 'g', 'Р': 'H', 'р': 'h', 'О': 'J', 'о': 'j', 'Л': 'K', 'л': 'k', 'Д': 'L', 'д': 'l', 'Ж': ':', 'ж': ';', 'Э': '"', 'э': '\'', 'Я': 'Z', 'я': 'z', 'Ч': 'X', 'ч': 'x', 'С': 'C', 'с': 'c', 'М': 'V', 'м': 'v', 'И': 'B', 'и': 'b', 'Т': 'N', 'т': 'n', 'Ь': 'M', 'ь': 'm', 'Б': '<', 'б': ',', 'Ю': '>', 'ю': '.', ',': '?', '.': '/'}
 KEYBOARD_EN_RU = {'`': 'ё', '~': 'Ё', '@': '"', '#': '№', '$': ';', '^': ':', '&': '?', 'q': 'й', 'Q': 'Й', 'w': 'ц', 'W': 'Ц', 'E': 'У', 'e': 'у', 'R': 'К', 'r': 'к', 'T': 'Е', 't': 'е', 'Y': 'Н', 'y': 'н', 'U': 'Г', 'u': 'г', 'I': 'Ш', 'i': 'ш', 'O': 'Щ', 'o': 'щ', 'P': 'З', 'p': 'з', '{': 'Х', '[': 'х', ']': 'ъ', '}': 'Ъ', '|': '/', '\\': '\\', 'A': 'Ф', 'a': 'ф', 'S': 'Ы', 's': 'ы', 'D': 'В', 'd': 'в', 'F': 'А', 'f': 'а', 'G': 'П', 'g': 'п', 'H': 'Р', 'h': 'р', 'J': 'О', 'j': 'о', 'K': 'Л', 'k': 'л', 'L': 'Д', 'l': 'д', ':': 'Ж', ';': 'ж', '"': 'Э', '\'': 'э', 'Z': 'Я', 'z': 'я', 'X': 'Ч', 'x': 'ч', 'C': 'С', 'c': 'с', 'V': 'М', 'v': 'м', 'B': 'И', 'b': 'и', 'N': 'Т', 'n': 'т', 'M': 'Ь', 'm': 'ь', '<': 'Б', ',': 'б', '>': 'Ю', '.': 'ю', '?': ',', '/': '.'}
@@ -46,16 +49,15 @@ with codecs.open('./learn.txt', 'r', 'utf8') as f:
         for word in line.rstrip().split():
             voc.add(normalization(word))
 
-print(len(voc))
+print(f'Word vocabulary size: {len(voc)}')
 
 
 def make_ngrams(n: int, voc: set):
-    ngrams_voc = set()
-    with open(f'{n}grams.txt', 'w', encoding='utf-8') as file:
+    with open(f'{n}grams_all.txt', 'w', encoding='utf-8') as file:
         for word in voc:
             word_ngrams = ngrams(word, n)
             ngrams_voc = [''.join(item) for item in word_ngrams]
-            file.write(' '.join(ngrams_voc) + '\n')
+            file.write('\n'.join(ngrams_voc) + '\n')
 
 
 n = 3  # for ngrams
@@ -67,22 +69,27 @@ with codecs.open(f'./{n}grams.txt', 'r', 'utf8') as f:
         ngrams_voc.append(line.split())
 
 
-# stemmer_ru = SnowballStemmer('russian', False)
-# stemmer_en = SnowballStemmer('english', False)
+count_vec = CountVectorizer(stop_words="english", analyzer='char_wb',
+                            ngram_range=(3, 3), max_df=1.0, min_df=1, max_features=None)
 
-# TrigramCollocationFinder
+count_train = count_vec.fit(voc)
+bag_of_words = count_vec.transform(voc)
+# print("\nEvery 3rd feature:\n{}".format(count_vec.get_feature_names()[::3]))
+
+
 def corrector(query):
     words = query.lower().split()
     for raw_word in words:
         word = normalization(raw_word)
         if word not in voc:
-            # word_ngrams = ngrams(word, n)
-            # word_ngrams = [''.join(item) for item in word_ngrams]
-            # for item in ngrams_voc:
-            #
-            # for ngram in word_ngrams:
-            #     if not ngram in ngrams_voc:
-                    return translate(query)
+            common = count_vec.transform([word])
+            s_initial = common.data.size
+            translated = translate(query)
+            s_translate = count_vec.transform([translated]).data.size
+            # print(common)
+            if s_translate > s_initial:
+                return translated
+            # return translate(query)
     return query
 
 
