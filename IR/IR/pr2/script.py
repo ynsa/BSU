@@ -81,14 +81,14 @@ def corrector(query):
     words = query.lower().split()
     for raw_word in words:
         word = normalization(raw_word)
-        if word not in voc:
-            common = count_vec.transform([word])
-            s_initial = common.data.size
-            translated = translate(query)
-            s_translate = count_vec.transform([translated]).data.size
-            # print(common)
-            if s_translate > s_initial:
-                return translated
+        # if word not in voc:
+        common = count_vec.transform(words)
+        s_initial = common.data.size
+        translated = translate(query)
+        s_translate = count_vec.transform([translated]).data.size
+        # print(common)
+        if s_translate > s_initial:
+            return translated
             # return translate(query)
     return query
 
