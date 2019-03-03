@@ -79,16 +79,18 @@ bag_of_words = count_vec.transform(voc)
 
 def corrector(query):
     words = query.lower().split()
-    for raw_word in words:
-        word = normalization(raw_word)
+    words = [normalization(raw_word) for raw_word in words]
+    # for raw_word in words:
+    #     word = normalization(raw_word)
         # if word not in voc:
-        common = count_vec.transform(words)
-        s_initial = common.data.size
-        translated = translate(query)
-        s_translate = count_vec.transform([translated]).data.size
-        # print(common)
-        if s_translate > s_initial:
-            return translated
+    common = count_vec.transform(words)
+    s_initial = common.data.size
+    translated = translate(query).split()
+    translated = [normalization(raw_word) for raw_word in translated]
+    s_translate = count_vec.transform(translated).data.size
+    # print(common)
+    if s_translate > s_initial:
+        return translated
             # return translate(query)
     return query
 
