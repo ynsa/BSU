@@ -85,12 +85,12 @@ def corrector(query):
         # if word not in voc:
     common = count_vec.transform(words)
     s_initial = common.data.size
-    translated = translate(query).split()
-    translated = [normalization(raw_word) for raw_word in translated]
+    raw_translated = translate(query)
+    translated = [normalization(raw_word) for raw_word in raw_translated.split()]
     s_translate = count_vec.transform(translated).data.size
     # print(common)
     if s_translate > s_initial:
-        return translated
+        return raw_translated
             # return translate(query)
     return query
 
@@ -102,6 +102,7 @@ with codecs.open('./test_result.txt', 'r', 'utf8') as f:
         query, result = line.rstrip().split('\t')
         predict = corrector(query)
         if predict != result:
+            print(f'Predicted: {predict}\t\t Expected: {result}\n')
             err += 1
         else:
             ok += 1
