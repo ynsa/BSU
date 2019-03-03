@@ -1,9 +1,7 @@
+import codecs
 import re
 import string
-import codecs
 
-import numpy as np
-from nltk import ngrams, SnowballStemmer, TrigramCollocationFinder
 from sklearn.feature_extraction.text import CountVectorizer
 
 KEYBOARD_RU_EN = {'ё': '`', 'Ё': '~', '"': '@', '№': '#', ';': '$', ':': '^', '?': '&', 'й': 'q', 'Й': 'Q', 'ц': 'w', 'Ц': 'W', 'У': 'E', 'у': 'e', 'К': 'R', 'к': 'r', 'Е': 'T', 'е': 't', 'Н': 'Y', 'н': 'y', 'Г': 'U', 'г': 'u', 'Ш': 'I', 'ш': 'i', 'Щ': 'O', 'щ': 'o', 'З': 'P', 'з': 'p', 'Х': '{', 'х': '[', 'ъ': ']', 'Ъ': '}', '/': '|', '\\': '\\', 'Ф': 'A', 'ф': 'a', 'Ы': 'S', 'ы': 's', 'В': 'D', 'в': 'd', 'А': 'F', 'а': 'f', 'П': 'G', 'п': 'g', 'Р': 'H', 'р': 'h', 'О': 'J', 'о': 'j', 'Л': 'K', 'л': 'k', 'Д': 'L', 'д': 'l', 'Ж': ':', 'ж': ';', 'Э': '"', 'э': '\'', 'Я': 'Z', 'я': 'z', 'Ч': 'X', 'ч': 'x', 'С': 'C', 'с': 'c', 'М': 'V', 'м': 'v', 'И': 'B', 'и': 'b', 'Т': 'N', 'т': 'n', 'Ь': 'M', 'ь': 'm', 'Б': '<', 'б': ',', 'Ю': '>', 'ю': '.', ',': '?', '.': '/'}
@@ -52,29 +50,17 @@ with codecs.open('./learn.txt', 'r', 'utf8') as f:
 print(f'Word vocabulary size: {len(voc)}')
 
 
-def make_ngrams(n: int, voc: set):
-    with open(f'{n}grams_all.txt', 'w', encoding='utf-8') as file:
-        for word in voc:
-            word_ngrams = ngrams(word, n)
-            ngrams_voc = [''.join(item) for item in word_ngrams]
-            file.write('\n'.join(ngrams_voc) + '\n')
+count_vec = CountVectorizer(
+    stop_words="english",
+    analyzer='char_wb',
+    ngram_range=(3, 5),
+    max_df=1.0,
+    min_df=1,
+    max_features=None
+)
 
-
-n = 3  # for ngrams
-# make_ngrams(n, voc)
-
-# ngrams_voc = []
-# with codecs.open(f'./{n}grams.txt', 'r', 'utf8') as f:
-#     for line in f:
-#         ngrams_voc.append(line.split())
-
-
-count_vec = CountVectorizer(stop_words="english", analyzer='char_wb',
-                            ngram_range=(3, 4), max_df=1.0, min_df=1, max_features=None)
-
-count_train = count_vec.fit(voc)
-bag_of_words = count_vec.transform(voc)
-# print("\nEvery 3rd feature:\n{}".format(count_vec.get_feature_names()[::3]))
+count_vec.fit(voc)
+count_vec.transform(voc)
 
 regex = re.compile(
         r'^(?:http|ftp)s?://' # http:// or https://
@@ -84,9 +70,6 @@ regex = re.compile(
         r'(?::\d+)?' # optional port
         r'(?:/?|[/?]\S+)$', re.IGNORECASE)
 
-# print re.match(regex, "http://www.example.com") is not None
-RU_VOWELS = 'аоэиуыеёюя'
-EN_VOWELS = 'aeiou'
 
 def corrector(query):
     raw_translated = translate(query)
@@ -97,39 +80,17 @@ def corrector(query):
     elif re.match(regex, raw_translated):
         return raw_translated
 
+    # query normalization
     words = query.lower().split()
     words = [normalization(raw_word) for raw_word in words]
-    # for raw_word in words:
-    #     word = normalization(raw_word)
-        # if word not in voc:
-    common = count_vec.transform(words)
-    s_initial = common.data.size
+    s_initial = count_vec.transform(words).data.size
+
+    # translated normalization
     translated = [normalization(raw_word) for raw_word in raw_translated.split()]
     s_translate = count_vec.transform(translated).data.size
-    # print(common)
-    # if abs(s_translate - s_initial) == 1:
-    # max_punct_len = 0
-    # temp_punct_len = 0
-    # for ch in query:
-    #     if ch in string.punctuation:
-    #         temp_punct_len += 1
-    #     else:
-    #         if temp_punct_len > max_punct_len:
-    #             max_punct_len = temp_punct_len
-    #         temp_punct_len = 0
-    # if max_punct_len > 2:
 
     if s_translate > s_initial:
-        # if abs(s_translate - s_initial) < 2:
-        #     print(f'Very close: {raw_translated}')
         return raw_translated
-    # else:
-    #     for word in words:
-    #         if len(word) > 2:
-    #             vowels = [x for x in word if x in RU_VOWELS or x in EN_VOWELS]
-    #             if not vowels:
-    #                 return raw_translated
-            # return translate(query)
     return query
 
 
@@ -140,8 +101,6 @@ with codecs.open('./test_result.txt', 'r', 'utf8') as f:
         query, result = line.rstrip().split('\t')
         predict = corrector(query)
         if predict != result:
-            # print(f'Initial: {query}\t\tPredicted: {predict}\t\t Expected: {result}\n')
-            print(f'Predicted: {predict}\t\t Expected: {result}\n')
             err += 1
         else:
             ok += 1
