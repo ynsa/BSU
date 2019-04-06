@@ -4,7 +4,7 @@ from collections import Counter
 ranks = {}
 global_links = {}
 prob_any = {}
-with bz2.open('./links.mistery.txt.bz2', 'rt', encoding='utf8') as f:
+with bz2.open('./links.full.txt.bz2', 'rt', encoding='utf8') as f:
     for line in f:
         links = line.rstrip().split('\t')
         x = links[0]
@@ -54,9 +54,8 @@ while not stop:
         iter_total_sum += new_ranks[x]
         maxx = maxx if maxx > abs(ranks[x] - new_ranks[x]) else abs(ranks[x] - new_ranks[x])
         if abs(ranks[x] - new_ranks[x]) > pow(10, -5):
-            # print('{}: {:.5f} -> {:.5f}'.format(x, ranks[x], new_ranks[x]))
             stop = False
-    print('{:.8f}'.format(maxx))
+    print('Max difference through iteration: {:.8f}'.format(maxx))
     if abs(iter_total_sum - total_sum) > pow(10, -5):
         print(f'{i}: {total_sum} -> {iter_total_sum}')
         raise ValueError('Not correct')

@@ -1,0 +1,69 @@
+<html lang="ru">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="./jquery-3.3.1.min.js"></script>
+        <script src="./typeahead.jquery.min.js"></script>
+        <link rel="stylesheet" href="./demo.css">
+    </head>
+    <body>
+        <div class="container">
+          <input class="typeahead" id="typeahead" type="text" placeholder="Ask me something">
+          <img src="loading.gif" id="loading" class="hidden">
+          <div id="results">
+          </div>
+        </div>
+        <script>
+            function askSuggestServer(query, cb_sync, cb_async) {
+                $.get('./suggest.json', {'prefix': query})
+                .done(function(cb, data) {
+                    cb(data);
+                }.bind(null, cb_async));
+            };
+
+            function askSearchServer(query, cb) {
+                $.get('./search.json', {'query': query})
+                .done(function(cb, data) {
+                    cb(data);
+                }.bind(null, cb));
+            };
+
+            function enterPress() {
+                $('#typeahead').typeahead('close');
+                $('#results').children().remove();
+                $('#loading').removeClass('hidden');
+
+                askSearchServer($('#typeahead').val(), function(docs) {
+                   var res = $('#results');
+                   $('#loading').addClass('hidden');
+                   for (var i in docs) {
+                       var doc_info = docs[i];
+                       var doc = $('<div/>', {'class': 'doc'});
+                       doc.append( $('<a/>', {'class': 'doc_title', 'href': doc_info.link, 'html' : doc_info.title, 'target': '_blank'}) );
+                       doc.append( $('<div/>', {'class': 'doc_snippet', 'html': doc_info.snippet}) );
+                       doc.appendTo(res);
+                    }
+                });
+            }
+
+            $('#typeahead').typeahead({
+              hint: true,
+              highlight: true,
+              minLength: 0,
+            },
+            {
+              name: 'suggest',
+              source: askSuggestServer,
+              limit: 101
+            }).keyup(function(e){
+                if(e.keyCode == 13) {
+                    enterPress();
+                }
+            });
+
+            $('#typeahead').typeahead('val', 'harry potter');
+            enterPress();
+
+        </script>
+    </body>
+</html>
